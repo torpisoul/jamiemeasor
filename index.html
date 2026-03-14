@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Jamie Measor's Gym Tracker</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap');
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f3f4f6;
+        }
+        .entry-card:hover .delete-btn {
+            opacity: 1;
+        }
+    </style>
+</head>
+<body class="min-h-screen pb-12">
+
+    <!-- Header -->
+    <header class="bg-indigo-600 text-white py-6 shadow-lg mb-8">
+        <div class="container mx-auto px-4">
+            <h1 class="text-2xl font-bold">Jamie Measor's Gym Log</h1>
+            <p class="text-indigo-100 text-sm">Simple Weight & Measurement Tracker</p>
+        </div>
+    </header>
+
+    <main class="container mx-auto px-4 max-w-2xl">
+        
+        <!-- Input Section -->
+        <section class="bg-white rounded-xl shadow-md p-6 mb-8">
+            <h2 class="text-lg font-semibold mb-4 text-gray-800">Add New Entry</h2>
+            <form id="gymForm" class="space-y-4">
+                <div class="grid grid-cols-1 gap-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Exercise Name</label>
+                        <input type="text" id="exercise" placeholder="e.g., Bench Press" required
+                            class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all">
+                    </div>
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Weight (kg)</label>
+                            <input type="number" id="weight" step="0.5" placeholder="0" required
+                                class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Reps / Measurement</label>
+                            <input type="text" id="measurement" placeholder="e.g., 10 or 40cm" required
+                                class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all">
+                        </div>
+                    </div>
+                </div>
+                <button type="submit" 
+                    class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-3 rounded-lg transition-colors shadow-sm">
+                    Log Session Entry
+                </button>
+            </form>
+        </section>
+
+        <!-- History Section -->
+        <section>
+            <div class="flex justify-between items-center mb-4">
+                <h2 class="text-lg font-semibold text-gray-800">History</h2>
+                <button id="clearAll" class="text-xs text-red-500 hover:text-red-700 font-medium">Clear All Data</button>
+            </div>
+            
+            <div id="historyList" class="space-y-3">
+                <!-- Entries will be injected here -->
+                <p id="emptyState" class="text-center text-gray-500 py-10 italic">No entries yet. Start training, Jamie!</p>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- Custom Toast Notification -->
+    <div id="toast" class="fixed bottom-5 left-1/2 -translate-x-1/2 bg-gray-800 text-white px-6 py-3 rounded-full shadow-2xl opacity-0 transition-opacity duration-300 pointer-events-none">
+        Entry saved to memory.
+    </div>
+
+    <script>
+        const gymForm = document.getElementById('gymForm');
+        const historyList = document.getElementById('historyList');
+        const emptyState = document.getElementById('emptyState');
+        const clearAllBtn = document.getElementById('clearAll');
+        const toast = document.getElementById('toast');
+
+        // Initial Load
+        document.addEventListener('DOMContentLoaded', loadEntries);
+
+        // Handle Form Submission
+        gymForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+            
+            const entry = {
+                id: Date.now(),
+                date: new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }),
+                exercise: document.getElementById('exercise').value,
+                weight: document.getElementById('weight').value,
+                measurement: document.getElementById('measurement').value
+            };
+
+            saveEntry(entry);
+            gymForm.reset();
+            showToast();
+        });
+
+        // Save to LocalStorage
+        function saveEntry(entry) {
+            const entries = JSON.parse(localStorage.getItem('jamie_gym_data')) || [];
+            entries.unshift(entry); // Add to beginning
+            localStorage.setItem('jamie_gym_data', JSON.stringify(entries));
+            renderEntries();
+        }
+
+        // Load and Render
+        function loadEntries() {
+            renderEntries();
+        }
+
+        function renderEntries() {
+            const entries = JSON.parse(localStorage.getItem('jamie_gym_data')) || [];
+            
+            if (entries.length === 0) {
+                emptyState.style.display = 'block';
+                historyList.innerHTML = '';
+                historyList.appendChild(emptyState);
+                return;
+            }
+
+            emptyState.style.display = 'none';
+            historyList.innerHTML = '';
+
+            entries.forEach(item => {
+                const div = document.createElement('div');
+                div.className = 'entry-card bg-white p-4 rounded-xl shadow-sm border border-gray-100 flex justify-between items-center animate-in fade-in slide-in-from-top-2 duration-300';
+                div.innerHTML = `
+                    <div>
+                        <p class="text-xs text-indigo-500 font-bold uppercase tracking-wider">${item.date}</p>
+                        <h3 class="font-bold text-gray-800">${item.exercise}</h3>
+                        <p class="text-gray-600 text-sm">${item.weight}kg — ${item.measurement}</p>
+                    </div>
+                    <button onclick="deleteEntry(${item.id})" class="delete-btn opacity-0 transition-opacity p-2 text-gray-300 hover:text-red-500">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                        </svg>
+                    </button>
+                `;
+                historyList.appendChild(div);
+            });
+        }
+
+        // Delete Single Entry
+        window.deleteEntry = function(id) {
+            let entries = JSON.parse(localStorage.getItem('jamie_gym_data')) || [];
+            entries = entries.filter(e => e.id !== id);
+            localStorage.setItem('jamie_gym_data', JSON.stringify(entries));
+            renderEntries();
+        };
+
+        // Clear All Data
+        clearAllBtn.addEventListener('click', () => {
+            if (confirm('Are you sure you want to clear all history, Jamie?')) {
+                localStorage.removeItem('jamie_gym_data');
+                renderEntries();
+            }
+        });
+
+        // Simple Feedback UI
+        function showToast() {
+            toast.style.opacity = '1';
+            setTimeout(() => {
+                toast.style.opacity = '0';
+            }, 2000);
+        }
+    </script>
+</body>
+</html>
+
